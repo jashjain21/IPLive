@@ -33,35 +33,38 @@
         }
     </style>
     <head>
-        <title>IPLive {{ player[1] }} </title>
+        <title>IPLive {{ player.player_name if player else 'Unknown' }} </title>
     </head>
     <body>
-        <h1 class="shad">{{player[1]}}</h1>
+        {% if player %}
+        <h1 class="shad">{{ player.player_name }}</h1>
         <div class="card">
-            <h4>Role: {{player[2]}}</h4>
-            <h4>Nationality: {{player[3]}}</h4>
+            <h4>Role: Player</h4>
             {% for j in ts %}
-                {% if j[:2:]==player[0][:2:] %}
+                {% if j[:2:]==player.player_id[:2:] %}
                 <h4>Team: {{j}}</h4>
                 {% endif %}
             {% endfor %}
-            <h4>Matches Played: {{player[-4]}}</h4>
+            <h4>Matches Played: {{ player.matches_played }}</h4>
         </div>
         <div class="card">
             <h2 class="shadS">Batting Stats</h2>
-            <h4>Runs: {{player[4]}}</h4>
-            <h4>Balls Faced: {{player[-2]}}</h4>
-            <h4>Average: {{player[5]}}</h4>
-            <h4>Strike Rate: {{player[5]}}</h4>
+            <h4>Runs: {{ player.runs }}</h4>
+            <h4>Balls Faced: {{ player.balls_faced }}</h4>
+            <h4>Average: {{ player.batting_average }}</h4>
+            <h4>Strike Rate: {{ player.batting_strike_rate }}</h4>
         </div>
         <div class="card">
             <h2 class="shadS">Bowling Stats</h2>
-            <h4>Wickets: {{player[7]}}</h4>
-            <h4>Overs Bowled: {{player[-1]}}</h4>
-            <h4>Runs Conceded: {{player[-3]}}</h4>
-            <h4>Economy: {{player[8]}}</h4>
-            <h4>Average: {{player[9]}}</h4>
-            <h4>Strike Rate: {{player[9]}}</h4>
+            <h4>Wickets: {{ player.wicket }}</h4>
+            <h4>Overs Bowled: {{ player.overs_bowled }}</h4>
+            <h4>Runs Conceded: {{ player.runs_conceded }}</h4>
+            <h4>Economy: {{ player.economy }}</h4>
+            <h4>Average: {{ player.bowling_average }}</h4>
+            <h4>Strike Rate: {{ player.bowling_strike_rate }}</h4>
         </div>
+        {% else %}
+        <h1 class="shad">Player not found</h1>
+        {% endif %}
     </body>
 </html>

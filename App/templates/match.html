@@ -169,11 +169,13 @@
 
         <h2 class="cent shadS">Bowling</h2>
         <div class="card">
-            {% if bt[0]['team']== batt[0][:2:] %}
-                <h3 class="cent">{{batt[0]}}</h3>
-            {% else %}
-                <h3 class="cent">{{batt[2]}}</h3>
+            {% if bt and bt[0] and batt and len(batt) > 2 %}
+                {% if bt[0]['team']== batt[0][:2:] %}
+                    <h3 class="cent">{{batt[0]}}</h3>
+                {% else %}
+                    <h3 class="cent">{{batt[2]}}</h3>
                 {% endif %}
+            {% endif %}
         </div>
         <div class="carder">
             <table class="cent">

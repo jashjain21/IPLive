@@ -95,14 +95,14 @@
             </tr>
             {% for i in pls %}
                 <tr>
-                    <td>{{i[1]}}</td>
+                    <td>{{ i.player_name }}</td>
                     {% for j in ts %}
-                        {% if i[0][:2:] ==j[:2:] %} 
-                            <td>{{j}}</td>
+                        {% if i.player_id[:2:] == j[:2:] %}
+                            <td>{{ j }}</td>
                         {% endif %}
                     {% endfor %}
-                    <td>{{i[3]}}</td>
-                    <td><a href="/playerstats/player?id={{i[0]}}">Stats</a></td>
+                    <td>Indian</td>
+                    <td><a href="/playerstats/player?id={{ i.player_id }}">Stats</a></td>
                 </tr>
             {% endfor %}
     </table>

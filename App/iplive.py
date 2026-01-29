@@ -33,9 +33,9 @@ def teamname(s):
 
 
 def db_to_plyr(name,team):
-    sql="SELECT * FROM PLAYER WHERE PLAYER_NAME LIKE '%"+name+"%' AND PLAYER_ID LIKE '"+team+"%';"
+    sql="SELECT * FROM PLAYER WHERE PLAYER_NAME LIKE %s AND PLAYER_ID LIKE %s"
     iplcursor = mydb.cursor()
-    iplcursor.execute(sql)
+    iplcursor.execute(sql, ('%' + name + '%', team + '%'))
     players = iplcursor.fetchall()
     print(players)
 
@@ -93,12 +93,13 @@ class IPLive:
     def insert_matchh_details(self):
         for i in self.lst:
             try:
-                strng="insert into matchh values ('"+i['id']+"', '"+teamname(i['team1']['name'])+"', '"+teamname(i['team2']['name'])+"', '"+i['venue_name']+"', '"+i['start_time'].split()[0]+"', '"+i['status']+"');"
-                mycursor.execute(strng)
-                #print(strng)
+                sql="INSERT INTO matchh VALUES (%s, %s, %s, %s, %s, %s)"
+                mycursor.execute(sql, (i['id'], teamname(i['team1']['name']), teamname(i['team2']['name']), i['venue_name'], i['start_time'].split()[0], i['status']))
+                #print(sql)
                 mydb.commit()
             except:
-                mycursor.execute("update matchh set result = '"+i['status']+"' where match_id = '"+i['id']+"';")
+                sql="UPDATE matchh SET result = %s WHERE match_id = %s"
+                mycursor.execute(sql, (i['status'], i['id']))
                 #print("update matchh set result = '"+i['status']+"' where match_id = '"+i['id']+"';")
                 mydb.commit()
 
@@ -114,13 +115,17 @@ class IPLive:
             for i in self.score['scorecard'][0]['batcard']:
                 # j = int(live['batting']['score'][0]['wickets'])
                 #print( "batsman:", i['name'])
-                mycursor.execute("select player_id from player where player_name like '%"+i['name']+"%' and player_id like '%"+team+"%';")
+                sql="SELECT player_id FROM player WHERE player_name LIKE %s AND player_id LIKE %s"
+                mycursor.execute(sql, ('%' + i['name'] + '%', '%' + team + '%'))
                 p_id = mycursor.fetchall()[0][0]
                 den = 1
                 if int(i['balls']) != 0:
                     den = int(i['balls'])
                 try:
-                    mycursor.execute("insert into batsman values ('"+p_id+"', '"+self.match_id+"', "+str(num)+", "+i['runs']+", "+str(int(i['runs'])/den *100)+", "+i['balls']+", "+str(int(i['fours'])+int(i['six']))+", "+i['fours']+","+i['six']+");")
+                    sql="INSERT INTO batsman VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
+                    strike_rate = int(i['runs']) / den * 100 if den != 0 else 0
+                    boundaries = int(i['fours']) + int(i['six'])
+                    mycursor.execute(sql, (p_id, self.match_id, num, i['runs'], strike_rate, i['balls'], boundaries, i['fours'], i['six']))
                     #print("insert into batsman values ('"+p_id+"', '"+self.match_id+"', "+str(num)+", "+i['runs']+", "+str((int(i['runs'])/den)*100)+", "+i['balls']+", "+str(int(i['fours'])+int(i['six']))+", "+i['fours']+","+i['six']+");")
                 except:
                     num+=1
@@ -130,12 +135,16 @@ class IPLive:
             for i in self.score['scorecard'][0]['batcard']:
                 # j = int(live['batting']['score'][0]['wickets'])
                 #print(i['name'])
-                mycursor.execute("select player_id from player where player_name like '%" + i['name'] + "%' and player_id like '%" + team + "%';")
+                sql="SELECT player_id FROM player WHERE player_name LIKE %s AND player_id LIKE %s"
+                mycursor.execute(sql, ('%' + i['name'] + '%', '%' + team + '%'))
                 p_id = mycursor.fetchall()[0][0]
                 den = 1
                 if int(i['balls']) != 0:
                     den = int(i['balls'])
-                mycursor.execute("update batsman set runs = "+i['runs']+", batting_strike_rate = "+str(int(i['runs'])/den*100)+", balls_faced = "+i['balls']+", boundaries = "+str(int(i['fours'])+int(i['six']))+", fours = "+i['fours']+", sixes = "+i['six']+" where player_id = '"+p_id+"' and match_id = '"+self.match_id+"';")
+                sql="UPDATE batsman SET runs = %s, batting_strike_rate = %s, balls_faced = %s, boundaries = %s, fours = %s, sixes = %s WHERE player_id = %s AND match_id = %s"
+                strike_rate = int(i['runs']) / den * 100 if den != 0 else 0
+                boundaries = int(i['fours']) + int(i['six'])
+                mycursor.execute(sql, (i['runs'], strike_rate, i['balls'], boundaries, i['fours'], i['six'], p_id, self.match_id))
                 #print("update batsman set runs = "+i['runs']+", batting_strike_rate = "+str((int(i['runs'])/den)*100)+", balls_faced = "+i['balls']+", boundaries = "+str(int(i['fours'])+int(i['six']))+", fours = "+i['fours']+", sixes = "+i['six']+" where player_id = '"+p_id+"' and match_id = '"+self.match_id+"';")
                 mydb.commit()
         except:
@@ -149,14 +158,17 @@ class IPLive:
 
         for i in self.score['scorecard'][0]['batcard']:
             team=teamname(self.score['scorecard'][0]['batteam'])
-            mycursor.execute("select runs from player where player_name like '%" + i['name'] + "%' and player_id like '%"+team+"%';")
+            sql="SELECT runs FROM player WHERE player_name LIKE %s AND player_id LIKE %s"
+            mycursor.execute(sql, ('%' + i['name'] + '%', '%' + team + '%'))
             data=mycursor.fetchall()
             print(i['name'],data)
             if data[0][0] == None:
-                strng="update player set runs="+i['runs']+" where player_name like '%"+i['name']+"%' and player_id like '%"+team+"%';"
-                mycursor.execute("update player set balls_faced = "+i['balls']+" where player_name like '%"+i['name']+"%' and player_id like '%"+team+"%';")
-                playerretriever="select player_id from player where player_name like '%"+i['name']+"%' and player_id like '%"+team+"%';"
-                mycursor.execute(playerretriever)
+                sql="UPDATE player SET runs = %s WHERE player_name LIKE %s AND player_id LIKE %s"
+                mycursor.execute(sql, (i['runs'], '%' + i['name'] + '%', '%' + team + '%'))
+                sql="UPDATE player SET balls_faced = %s WHERE player_name LIKE %s AND player_id LIKE %s"
+                mycursor.execute(sql, (i['balls'], '%' + i['name'] + '%', '%' + team + '%'))
+                sql="SELECT player_id FROM player WHERE player_name LIKE %s AND player_id LIKE %s"
+                mycursor.execute(sql, ('%' + i['name'] + '%', '%' + team + '%'))
                 for l in mycursor.fetchall():
                     batlst.append(l[0])
             else:
@@ -166,32 +178,39 @@ class IPLive:
                 mycursor.execute(playerretriever)
                 for l in mycursor.fetchall():
                     batlst.append(l[0])
-            mycursor.execute(strng)
 
 
         for i in self.score['scorecard'][0]['bowlcard']:
             team = teamname(self.score['scorecard'][1]['batteam'])
-            mycursor.execute("select wicket from player where player_name like '%" + i['name'] + "%'and player_id like '%"+team+"%';")
+            sql="SELECT wicket FROM player WHERE player_name LIKE %s AND player_id LIKE %s"
+            mycursor.execute(sql, ('%' + i['name'] + '%', '%' + team + '%'))
             data = mycursor.fetchall()
             #print(i['name'],data)
             if data[0][0]==None:
-                strng="update player set wicket="+i['wickets']+" where player_name like '%"+i['name']+"%' and player_id like '%"+team+"%';"
-                mycursor.execute("update player set runs_conceded = "+i['runs']+" where player_name like '%"+i['name']+"%' and player_id like '%"+team+"%';")
-                mycursor.execute("update player set overs_bowled = " + i['overs'] + " where player_name like '%" + i['name'] + "%' and player_id like '%" + team + "%';")
-                playerretriever = "select player_id from player where player_name like '%" + i['name'] + "%' and player_id like '%" + team + "%';"
-                mycursor.execute(playerretriever)
+                sql="UPDATE player SET wicket = %s WHERE player_name LIKE %s AND player_id LIKE %s"
+                mycursor.execute(sql, (i['wickets'], '%' + i['name'] + '%', '%' + team + '%'))
+                sql="UPDATE player SET runs_conceded = %s WHERE player_name LIKE %s AND player_id LIKE %s"
+                mycursor.execute(sql, (i['runs'], '%' + i['name'] + '%', '%' + team + '%'))
+                sql="UPDATE player SET overs_bowled = %s WHERE player_name LIKE %s AND player_id LIKE %s"
+                mycursor.execute(sql, (i['overs'], '%' + i['name'] + '%', '%' + team + '%'))
+                sql="SELECT player_id FROM player WHERE player_name LIKE %s AND player_id LIKE %s"
+                mycursor.execute(sql, ('%' + i['name'] + '%', '%' + team + '%'))
                 for l in mycursor.fetchall():
                     bowllst.append(l[0])
             else:
-                strng = "update player set wicket=wicket+" + i['wickets'] + " where player_name like '%" + i['name'] + "%' and player_id like '%" + team + "%';"
-                mycursor.execute("update player set runs_conceded = runs_conceded + " + i['runs'] + " where player_name like '%" + i['name'] + "%' and player_id like '%" + team + "%';")
-                mycursor.execute("select overs_bowled from player where player_name like '%" + i['name'] + "%' and player_id like '%" + team + "%';")
+                sql="UPDATE player SET wicket = wicket + %s WHERE player_name LIKE %s AND player_id LIKE %s"
+                mycursor.execute(sql, (i['wickets'], '%' + i['name'] + '%', '%' + team + '%'))
+                sql="UPDATE player SET runs_conceded = runs_conceded + %s WHERE player_name LIKE %s AND player_id LIKE %s"
+                mycursor.execute(sql, (i['runs'], '%' + i['name'] + '%', '%' + team + '%'))
+                sql="SELECT overs_bowled FROM player WHERE player_name LIKE %s AND player_id LIKE %s"
+                mycursor.execute(sql, ('%' + i['name'] + '%', '%' + team + '%'))
                 initial_overs_bowled = mycursor.fetchall()[0][0]
                 overs_bowled = float(initial_overs_bowled) + float(i['overs'])
                 overs_bowled = int(overs_bowled + (overs_bowled - int(overs_bowled)) // 0.6) + (overs_bowled - int(overs_bowled)) % 0.6
-                mycursor.execute("update player set overs_bowled = " + str(overs_bowled) + " where player_name like '%" + i['name'] + "%' and player_id like '%" + team + "%';")
-                playerretriever = "select player_id from player where player_name like '%" + i['name'] + "%' and player_id like '%" + team + "%';"
-                mycursor.execute(playerretriever)
+                sql="UPDATE player SET overs_bowled = %s WHERE player_name LIKE %s AND player_id LIKE %s"
+                mycursor.execute(sql, (str(overs_bowled), '%' + i['name'] + '%', '%' + team + '%'))
+                sql="SELECT player_id FROM player WHERE player_name LIKE %s AND player_id LIKE %s"
+                mycursor.execute(sql, ('%' + i['name'] + '%', '%' + team + '%'))
                 for l in mycursor.fetchall():
                     bowllst.append(l[0])
             mycursor.execute(strng)
@@ -199,49 +218,61 @@ class IPLive:
 
         for i in self.score['scorecard'][1]['batcard']:
             team = teamname(self.score['scorecard'][1]['batteam'])
-            mycursor.execute("select runs from player where player_name like '%" + i['name'] + "%' and player_id like '%"+team+"%';")
+            sql="SELECT runs FROM player WHERE player_name LIKE %s AND player_id LIKE %s"
+            mycursor.execute(sql, ('%' + i['name'] + '%', '%' + team + '%'))
             data = mycursor.fetchall()
             #print(i['name'], i['runs'])
             if data[0][0]==None:
-                strng="update player set runs="+i['runs']+" where player_name like '%"+i['name']+"%' and player_id like '%"+team+"%';"
+                sql="UPDATE player SET runs = %s WHERE player_name LIKE %s AND player_id LIKE %s"
+                mycursor.execute(sql, (i['runs'], '%' + i['name'] + '%', '%' + team + '%'))
                 #print(strng)
-                mycursor.execute("update player set balls_faced = " + i['balls'] + " where player_name like '%" + i['name'] + "%' and player_id like '%" + team + "%';")
-                playerretriever = "select player_id from player where player_name like '%" + i['name'] + "%' and player_id like '%" + team + "%';"
-                mycursor.execute(playerretriever)
+                sql="UPDATE player SET balls_faced = %s WHERE player_name LIKE %s AND player_id LIKE %s"
+                mycursor.execute(sql, (i['balls'], '%' + i['name'] + '%', '%' + team + '%'))
+                sql="SELECT player_id FROM player WHERE player_name LIKE %s AND player_id LIKE %s"
+                mycursor.execute(sql, ('%' + i['name'] + '%', '%' + team + '%'))
                 for l in mycursor.fetchall():
                     batlst.append(l[0])
             else:
-                strng = "update player set runs=runs+" + i['runs'] + " where player_name like '%" + i['name'] + "%' and player_id like '%"+team+"%';"
-                mycursor.execute("update player set balls_faced = balls_faced + " + i['balls'] + " where player_name like '%" + i['name'] + "%' and player_id like '%" + team + "%';")
-                playerretriever = "select player_id from player where player_name like '%" + i['name'] + "%' and player_id like '%" + team + "%';"
-                mycursor.execute(playerretriever)
+                sql="UPDATE player SET runs = runs + %s WHERE player_name LIKE %s AND player_id LIKE %s"
+                mycursor.execute(sql, (i['runs'], '%' + i['name'] + '%', '%' + team + '%'))
+                sql="UPDATE player SET balls_faced = balls_faced + %s WHERE player_name LIKE %s AND player_id LIKE %s"
+                mycursor.execute(sql, (i['balls'], '%' + i['name'] + '%', '%' + team + '%'))
+                sql="SELECT player_id FROM player WHERE player_name LIKE %s AND player_id LIKE %s"
+                mycursor.execute(sql, ('%' + i['name'] + '%', '%' + team + '%'))
                 for l in mycursor.fetchall():
                     batlst.append(l[0])
-            mycursor.execute(strng)
 
 
         for i in self.score['scorecard'][1]['bowlcard']:
             team = teamname(self.score['scorecard'][0]['batteam'])
-            mycursor.execute("select wicket from player where player_name like '%" + i['name'] + "%' and player_id like '%"+team+"%';")
+            sql="SELECT wicket FROM player WHERE player_name LIKE %s AND player_id LIKE %s"
+            mycursor.execute(sql, ('%' + i['name'] + '%', '%' + team + '%'))
             data = mycursor.fetchall()
             if data[0][0] == None:
-                strng="update player set wicket="+i['wickets']+" where player_name like '%"+i['name']+"%' and player_id like '%"+team+"%';"
-                mycursor.execute("update player set runs_conceded = " + i['runs'] + " where player_name like '%" + i['name'] + "%' and player_id like '%" + team + "%';")
-                mycursor.execute("update player set overs_bowled = " + i['overs'] + " where player_name like '%" + i['name'] + "%' and player_id like '%" + team + "%';")
-                playerretriever = "select player_id from player where player_name like '%" + i['name'] + "%' and player_id like '%" + team + "%';"
-                mycursor.execute(playerretriever)
+                sql="UPDATE player SET wicket = %s WHERE player_name LIKE %s AND player_id LIKE %s"
+                mycursor.execute(sql, (i['wickets'], '%' + i['name'] + '%', '%' + team + '%'))
+                sql="UPDATE player SET runs_conceded = %s WHERE player_name LIKE %s AND player_id LIKE %s"
+                mycursor.execute(sql, (i['runs'], '%' + i['name'] + '%', '%' + team + '%'))
+                sql="UPDATE player SET overs_bowled = %s WHERE player_name LIKE %s AND player_id LIKE %s"
+                mycursor.execute(sql, (i['overs'], '%' + i['name'] + '%', '%' + team + '%'))
+                sql="SELECT player_id FROM player WHERE player_name LIKE %s AND player_id LIKE %s"
+                mycursor.execute(sql, ('%' + i['name'] + '%', '%' + team + '%'))
                 for l in mycursor.fetchall():
                     bowllst.append(l[0])
             else:
-                strng = "update player set wicket=wicket+" + i['wickets'] + " where player_name like '%" + i['name'] + "%' and player_id like '%" + team + "%';"
-                mycursor.execute("update player set runs_conceded = runs_conceded + " + i['runs'] + " where player_name like '%" + i['name'] + "%' and player_id like '%" + team + "%';")
-                mycursor.execute("select overs_bowled from player where player_name like '%" + i['name'] + "%' and player_id like '%" + team + "%';")
+                sql="UPDATE player SET wicket = wicket + %s WHERE player_name LIKE %s AND player_id LIKE %s"
+                mycursor.execute(sql, (i['wickets'], '%' + i['name'] + '%', '%' + team + '%'))
+                sql="UPDATE player SET runs_conceded = runs_conceded + %s WHERE player_name LIKE %s AND player_id LIKE %s"
+                mycursor.execute(sql, (i['runs'], '%' + i['name'] + '%', '%' + team + '%'))
+                sql="SELECT overs_bowled FROM player WHERE player_name LIKE %s AND player_id LIKE %s"
+                mycursor.execute(sql, ('%' + i['name'] + '%', '%' + team + '%'))
                 initial_overs_bowled = mycursor.fetchall()[0][0]
                 overs_bowled = float(initial_overs_bowled) + float(i['overs'])
                 overs_bowled = str(int(overs_bowled + (overs_bowled - int(overs_bowled)) // 0.6) + (overs_bowled - int(overs_bowled)) % 0.6)
-                mycursor.execute("update player set overs_bowled = " + overs_bowled + " where player_name like '%" + i['name'] + "%' and player_id like '%" + team + "%';")
-                playerretriever = "select player_id from player where player_name like '%" + i['name'] + "%' and player_id like '%" + team + "%';"
-                mycursor.execute(playerretriever)
+                sql="UPDATE player SET overs_bowled = %s WHERE player_name LIKE %s AND player_id LIKE %s"
+                mycursor.execute(sql, (overs_bowled, '%' + i['name'] + '%', '%' + team + '%'))
+                sql="SELECT player_id FROM player WHERE player_name LIKE %s AND player_id LIKE %s"
+                mycursor.execute(sql, ('%' + i['name'] + '%', '%' + team + '%'))
                 for l in mycursor.fetchall():
                     bowllst.append(l[0])
             mycursor.execute(strng)
@@ -251,12 +282,15 @@ class IPLive:
         bowllst=list(set(bowllst))
         playerlist = list(set(list(batlst + bowllst)))
         for k in playerlist:
-            mycursor.execute("select matches_played from player where player_id = '"+k+"';")
+            sql="SELECT matches_played FROM player WHERE player_id = %s"
+            mycursor.execute(sql, (k,))
             value = mycursor.fetchall()[0][0]
             if value == None:
-                mycursor.execute("update player set matches_played = 1 where player_id = '"+k+"';")
+                sql="UPDATE player SET matches_played = 1 WHERE player_id = %s"
+                mycursor.execute(sql, (k,))
             else:
-                mycursor.execute("update player set matches_played = matches_played + 1 where player_id = '" + k + "';")
+                sql="UPDATE player SET matches_played = matches_played + 1 WHERE player_id = %s"
+                mycursor.execute(sql, (k,))
         mycursor.execute("update player set batting_strike_rate = runs * 100 / balls_faced;")
         mycursor.execute("update player set economy = runs_conceded / overs_bowled;")
         mycursor.execute("update player set bowling_average = runs_conceded / wicket;")
@@ -270,13 +304,14 @@ class IPLive:
         # score = c.scorecard(self.match_id)
         team = teamname(self.score['scorecard'][0]['batteam'])
         for i in self.score['scorecard'][0]['fall_wickets']:
-            mycursor.execute("select player_id from player where player_name like '%"+i['name']+"%' and player_id like '%"+team+"%';")
+            sql="SELECT player_id FROM player WHERE player_name LIKE %s AND player_id LIKE %s"
+            mycursor.execute(sql, ('%' + i['name'] + '%', '%' + team + '%'))
             batid = mycursor.fetchall()[0][0]
             for j in self.score['scorecard'][0]['batcard']:
                 if i['name'] == j['name']:
                     try:
-                        strng = "insert into wickets values ('" + self.match_id + "','" + batid + "','"+i['wkt_num']+"','" + j['dismissal'] + "','"+i['overs']+"');"
-                        mycursor.execute(strng)
+                        sql="INSERT INTO wickets VALUES (%s, %s, %s, %s, %s)"
+                        mycursor.execute(sql, (self.match_id, batid, i['wkt_num'], j['dismissal'], i['overs']))
                         #print(strng)
                     except:
                         pass
@@ -284,13 +319,13 @@ class IPLive:
         try:
             team = teamname(self.score['scorecard'][1]['batteam'])
             for i in self.score['scorecard'][1]['fall_wickets']:
-                strng=""
-                mycursor.execute("select player_id from player where player_name like '%" + i['name'] + "%' and player_id like '%" + team + "%';")
+                sql="SELECT player_id FROM player WHERE player_name LIKE %s AND player_id LIKE %s"
+                mycursor.execute(sql, ('%' + i['name'] + '%', '%' + team + '%'))
                 batid = mycursor.fetchall()[0][0]
                 for j in self.score['scorecard'][1]['batcard']:
                     if i['name'] == j['name']:
-                        strng = "insert into wickets values ('" + self.match_id + "','" + batid + "','"+i['wkt_num']+"','" +j['dismissal']+"','" + i['overs'] +"');"
-                mycursor.execute(strng)
+                        sql="INSERT INTO wickets VALUES (%s, %s, %s, %s, %s)"
+                        mycursor.execute(sql, (self.match_id, batid, i['wkt_num'], j['dismissal'], i['overs']))
                 #print(strng)
             mydb.commit()
         except:
@@ -301,7 +336,8 @@ class IPLive:
         team = teamname(self.score['scorecard'][0]['batteam'])
         for i in self.commentary['commentary']:
             if i['over'] != None:
-                mycursor.execute("update score set commentary = '"+i['comm']+"' where over_ball = '"+i['over']+"' and match_id = '"+self.match_id+"' and team = '"+team+"';")
+                sql="UPDATE score SET commentary = %s WHERE over_ball = %s AND match_id = %s AND team = %s"
+                mycursor.execute(sql, (i['comm'], i['over'], self.match_id, team))
                 mydb.commit()
                 #print("update score set commentary = '"+i['comm']+"' where over_ball = '"+i['over']+"' and match_id = '"+self.match_id+"' and team = '"+team+"';")
 
@@ -352,15 +388,8 @@ class IPLive:
                 bowl_name = live_score['bowl']
         else:
             bowl_name = sc['scorecard'][0]['bowlcard'][-1]['name']
-        sql = "INSERT IGNORE INTO score VALUES (" + sc['scorecard'][0][
-            'overs'] + "," + self.match_id + "," + "(SELECT PLAYER_ID FROM PLAYER WHERE PLAYER_NAME LIKE '%" + \
-              sc['scorecard'][0]['batcard'][bat_1][
-                  'name'] + "%')" + "," + "(SELECT PLAYER_ID FROM PLAYER WHERE PLAYER_NAME LIKE '%" + \
-              sc['scorecard'][0]['batcard'][-1][
-                  'name'] + "%')" + "," + "(SELECT PLAYER_ID FROM PLAYER WHERE PLAYER_NAME LIKE '%" + bowl_name + "%')" + ",'" + teamname(
-            sc['scorecard'][0]['batteam']) + "'," + sc['scorecard'][0]['runs'] + "," + sc['scorecard'][0][
-                  'wickets'] + "," + runs_req + "," + rrr + "," + crr + ", NULL" + ");"
-        mycursor.execute(sql)
+        sql = "INSERT IGNORE INTO score VALUES (%s, %s, (SELECT PLAYER_ID FROM PLAYER WHERE PLAYER_NAME LIKE %s), (SELECT PLAYER_ID FROM PLAYER WHERE PLAYER_NAME LIKE %s), (SELECT PLAYER_ID FROM PLAYER WHERE PLAYER_NAME LIKE %s), %s, %s, %s, %s, %s, %s, NULL)"
+        mycursor.execute(sql, (sc['scorecard'][0]['overs'], self.match_id, '%' + sc['scorecard'][0]['batcard'][bat_1]['name'] + '%', '%' + sc['scorecard'][0]['batcard'][-1]['name'] + '%', '%' + bowl_name + '%', teamname(sc['scorecard'][0]['batteam']), sc['scorecard'][0]['runs'], sc['scorecard'][0]['wickets'], runs_req, rrr, crr))
         mydb.commit()
         if (over != 20):
             return sc
@@ -451,21 +480,15 @@ class IPLive:
             sr="NULL"
             if int(i['wickets'])!=0:
                 sr=str(int(i['overs'])*6/int(i['wickets']))
-            ins = "INSERT INTO BOWLER VALUES ((SELECT PLAYER_ID FROM PLAYER WHERE PLAYER_NAME LIKE '%" + i[
-                'name'] + "%' AND PLAYER_ID LIKE'" + teamname(
-                sc['scorecard'][0]['bowlteam']) + "%'),'" + self.match_id + "'," + i[
-                      'wickets'] + "," + econ + "," +avg+ ','+sr+"," + i['runs'] + "," + i['overs'] + ");"
-            upd = "UPDATE BOWLER SET WICKET=" + i['wickets'] + ",ECONOMY=" + econ + ",RUNS_CONCEDED=" + i[
-                'runs'] + ",OVER_BOWLED=" + i[
-                      'overs'] + " WHERE PLAYER_ID=(SELECT PLAYER_ID FROM PLAYER WHERE PLAYER_NAME LIKE '%" + i[
-                      'name'] + "%' AND PLAYER_ID LIKE'" + teamname(sc['scorecard'][0]['bowlteam']) + "%');"
+            ins = "INSERT INTO BOWLER VALUES ((SELECT PLAYER_ID FROM PLAYER WHERE PLAYER_NAME LIKE %s AND PLAYER_ID LIKE %s), %s, %s, %s, %s, %s, %s, %s)"
+            upd = "UPDATE BOWLER SET WICKET=%s,ECONOMY=%s,RUNS_CONCEDED=%s,OVER_BOWLED=%s WHERE PLAYER_ID=(SELECT PLAYER_ID FROM PLAYER WHERE PLAYER_NAME LIKE %s AND PLAYER_ID LIKE %s)"
 
             try:
-                mycursor.execute(ins)
+                mycursor.execute(ins, ('%' + i['name'] + '%', teamname(sc['scorecard'][0]['bowlteam']) + '%', self.match_id, i['wickets'], econ, avg, sr, i['runs'], i['overs']))
             except mysql.connector.IntegrityError:
-                mycursor.execute(upd)
+                mycursor.execute(upd, (i['wickets'], econ, i['runs'], i['overs'], '%' + i['name'] + '%', teamname(sc['scorecard'][0]['bowlteam']) + '%'))
             except :
-                mycursor.execute(upd)
+                mycursor.execute(upd, (i['wickets'], econ, i['runs'], i['overs'], '%' + i['name'] + '%', teamname(sc['scorecard'][0]['bowlteam']) + '%'))
             mydb.commit()
 
     def display_orange_cap(self) :
